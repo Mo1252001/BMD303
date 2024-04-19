@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FHIR Patient Form</title>
+    <!-- Include the FHIR JavaScript client library -->
+    <script src="https://cdn.jsdelivr.net/npm/fhir-client@4.1.0/build/fhir-client.js"></script>
+</head>
+<body>
+    <h1>FHIR Patient Form</h1>
+
+    <label for="searchName">Search by Name:</label>
+    <input type="text" id="searchName">
+    <button onclick="searchPatient()">Search</button>
+
+    <h2>All Patients</h2>
+    <ul id="patientList"></ul>
+
+    <h2>Add New Patient</h2>
+    <label for="newPatientName">Name:</label>
+    <input type="text" id="newPatientName">
+    <button onclick="addPatient()">Add Patient</button>
+
+    <script>
+        // Initialize the FHIR client
+        FHIR.oauth2.ready().then(client => {
+            // Function to retrieve all patients
+            function getAllPatients() {
+                client.request('Patient').then(response => {
+                    displayPatients(response.entry);
+                }).catch(error => {
+                    console.error('Error fetching patients:', error);
+                });
+            }
+
+            // Function to search for patients by name
+            function searchPatient() {
+                const name = document.getElementById('searchName').value;
+                client.request(`Patient?name=${name}`).then(response => {
+                    displayPatients(response.entry);
+                }).catch(error => {
+                    console.error('Error searching for patients:', error);
+                });
+            }
+
+           
+            function addPatient() {
+                const newName = document.getElementById('newPatientName').value;
+                const newPatient = {
+                    resourceType: 'Patient',
+                    name: [{ text: newName }]
+                };
+                client.create(newPatient).then(response => {
+                    console.log('Patient added:', response);
+                    getAllPatients(); // Refresh the patient list
+                }).catch(error => {
+                    console.error('Error adding patient:', error);
+                });
+            }
+
+           
+            function deletePatient(patientId) {
+                client.delete({ resourceType: 'Patient', id: patientId }).then(response => {
+                    console.log('Patient deleted:', response);
+                    getAllPatients(); // Refresh the patient list
+                }).catch(error => {
+                    console.error('Error deleting patient:', error);
+                });
+            }
+
+          
+            function updatePatient(patientId, updatedPatient) {
+                // Implementation for updating a patient can be added here
+            }
+
+           
+            function displayPatients(patients) {
+                const patientList = document.getElementById('patientList');
+                patientList.innerHTML = ''; // Clear existing list
+                patients.forEach(patient => {
+                    const patientName = patient.resource.name[0].text;
+                    const patientId = patient.resource.id;
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${patientName} (ID: ${patientId})`;
+                    // Add delete button for each patient
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.onclick = () => deletePatient(patientId);
+                    listItem.appendChild(deleteButton);
+                    patientList.appendChild(listItem);
+                });
+            }
+
+            
+            getAllPatients();
+        }).catch(error => {
+            console.error('Error initializing FHIR client:', error);
+        });
+    </script>
+</body>
+</html>
